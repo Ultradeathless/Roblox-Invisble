@@ -1,41 +1,168 @@
-# Compiled Lua sources
-luac.out
+local Players = game:GetService("Players")
+local Run = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
-# luarocks build files
-*.src.rock
-*.zip
-*.tar.gz
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character
 
-# Object files
-*.o
-*.os
-*.ko
-*.obj
-*.elf
+local esp = false
 
-# Precompiled Headers
-*.gch
-*.pch
+local gui = Instance.new("ScreenGui")
+gui.IgnoreGuiInset = true
+gui.Name = "PlayerButtonsGui"
+gui.Parent = LocalPlayer.PlayerGui
 
-# Libraries
-*.lib
-*.a
-*.la
-*.lo
-*.def
-*.exp
+local frame = Instance.new("ScrollingFrame",gui)
+frame.Size = UDim2.new(.5,0,.5,0)
+frame.Position = UDim2.new(0.25,0,.95,0)
+frame.Parent = gui
 
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
+local uillayout = Instance.new("UIListLayout")
+uillayout.Padding = UDim.new(0.03, 0)
+uillayout.VerticalAlignment = Enum.VerticalAlignment.Center
+uillayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+uillayout.Parent = frame
 
-# Executables
-*.exe
-*.out
-*.app
-*.i*86
-*.x86_64
-*.hex
+local text = Instance.new("TextBox")
+text.Name = "IconChanger"
+text.Size = UDim2.new(0.3,0,.1,0)
+text.Position = UDim2.new(.35,0,.10,0)
+text.PlaceholderColor3 = Color3.new(1,1,1)
+text.TextColor3 = Color3.new(0.5,0.5,0.5)
+text.PlaceholderText = "Enter mouse id (only number)"
+text.TextScaled = true
+text.Parent = gui
+text.Text = ""
+
+local espButton = Instance.new("TextButton")
+espButton.Name = "ESP"
+espButton.Size = UDim2.new(.15,0,.05,0)
+espButton.Position = UDim2.new(0,0,.95,0)
+espButton.TextScaled = true
+espButton.Text = "Esp : false"
+espButton.Parent = gui
+
+local becomeInvisible = Instance.new("TextButton")
+becomeInvisible.Name = "INVISIBLE-BUTTON"
+becomeInvisible.Size = UDim2.new(.15,0,.05,0)
+becomeInvisible.Position = UDim2.new(0,0,.9,0)
+becomeInvisible.TextScaled = true
+becomeInvisible.Text = "Invisible"
+becomeInvisible.Parent = gui
+
+local function createButton(plr)
+	local name = tostring(plr.Name)
+	local display = tostring(plr.DisplayName)
+	local id = tonumber(plr.UserId)
+
+	local EnemyChar = plr.Character
+
+	local button = Instance.new("TextButton")
+	button.Size = UDim2.new(0.8,0,.1,0)
+	button.TextScaled = true
+	button.Parent = frame
+	button.Text = display .. ", " .. name .. "; " .. id
+
+	button.MouseButton1Click:Connect(function()
+		Character.HumanoidRootPart.CFrame = EnemyChar.HumanoidRootPart.CFrame
+	end)
+end
+
+local function removeButton(plr)
+	if frame:FindFirstChildOfClass("TextButton").Name == plr.Name then
+		frame:FindFirstChildOfClass("TextButton"):Destroy()
+	end
+end
+
+local function notify(title,notifyText)
+	game.StarterGui:SetCore("SendNotification", {
+		Title = title;
+		Text = notifyText;
+		Duration = "10";
+	})
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+	if player ~= LocalPlayer then
+		createButton(player)
+	end
+end
+
+Players.PlayerAdded:Connect(function(player)
+	createButton(player)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+	removeButton(player)
+end)
+
+text.FocusLost:Connect(function(boolean)
+	local image = tonumber(text.ContentText)
+
+	if image == nil and boolean == false then
+		UserInputService.MouseIcon = ""
+	else
+		UserInputService.MouseIcon = "rbxassetid://" .. image
+	end
+end)
+
+becomeInvisible.MouseButton1Click:Connect(function()
+	if becomeInvisible.Text == "Invisible" then
+		becomeInvisible.Text = "Visible"
+		for i,v in ipairs(Character:GetDescendants()) do
+			if v:IsA("BasePart") then
+				v.Transparency = 1
+				v.CanCollide = false
+				v.CanTouch = false
+			elseif v:IsA("Humanoid") then
+				v.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+			elseif v:IsA("Weld") or v:IsA("WeldConstraint") then
+				v.Name = "nil"
+			else
+				v:Destroy()
+			end
+			notify("Warning", "The accessoury or smth else it will destroyed if you make yourself visible anything is will be gone")
+		end
+	elseif becomeInvisible.Text == "Visible" then
+		for i,v in ipairs(Character:GetDescendants()) do
+			if v:IsA("BasePart") then
+				v.Transparency = 0
+				v.CanCollide = true
+				v.CanTouch = true
+			end
+		end	
+		becomeInvisible.Text = "Invisible"
+		Character.Humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.Viewer
+	end
+end)
+
+espButton.MouseButton1Click:Connect(function()
+	if espButton.Text == "Esp : false" then
+		for _, player in ipairs(Players:GetPlayers()) do
+			local hightlight = Instance.new("Highlight")
+			hightlight.FillColor = Color3.new(0,0,0)
+			hightlight.Parent = player.Character
+			espButton.Text = "Esp : true"
+		end
+	elseif espButton.Text == "Esp : true" then
+		for _, player in ipairs(Players:GetPlayers()) do
+			if player.Character:FindFirstChildOfClass("Highlight") then
+				player.Character:FindFirstChildOfClass("Highlight"):Destroy()
+				espButton.Text = "Esp : false"
+			end
+		end
+	end
+end)
+
+frame.MouseEnter:Connect(function(x,y)
+	local UpTween = TweenService:Create(frame,TweenInfo.new(1),{Position = UDim2.new(0.25,0,.25,0)})
+	UpTween:Play()
+end)
+
+frame.MouseLeave:Connect(function(x,y)
+	wait(1)
+	local DownTween = TweenService:Create(frame,TweenInfo.new(1),{Position = UDim2.new(0.25,0,.95,0)})
+	DownTween:Play()
+end)
 
